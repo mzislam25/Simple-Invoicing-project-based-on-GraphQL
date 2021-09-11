@@ -3,6 +3,7 @@ const User = require('../models/user');
 const Customer = require('../models/customer');
 const Invoice = require('../models/invoice');
 const InvoiceItem = require('../models/invoice_item');
+const mongoose = require('mongoose');
 
 const {
     GraphQLInputObjectType,
@@ -60,8 +61,8 @@ const InvoiceType = new GraphQLObjectType({
         },
         invoiceNo: { type: GraphQLString },
         date: { type: GraphQLString },
-        subtotal: { type: GraphQLString },
-        total: { type: GraphQLString },
+        subtotal: { type: GraphQLFloat },
+        total: { type: GraphQLFloat },
     })
 });
 
@@ -76,9 +77,9 @@ const InvoiceItemType = new GraphQLObjectType({
             }
         },
         itemName: { type: GraphQLString },
-        itemQty: { type: GraphQLString },
-        itemPrice: { type: GraphQLString },
-        totalPrice: { type: GraphQLString },
+        itemQty: { type: GraphQLInt },
+        itemPrice: { type: GraphQLFloat },
+        totalPrice: { type: GraphQLFloat },
     })
 });
 
@@ -110,13 +111,57 @@ const RootQuery = new GraphQLObjectType({
                 return Customer.find();
             }
         },
-        invoices: {
+        invoicesList: {
             type: new GraphQLList(InvoiceType),
-            // args: { id: { type: GraphQLID } },
             resolve(parent, args) {
                 return Invoice.find();
             }
         },
+        invoice: {
+            type: InvoiceType,
+            args: { id: { type: GraphQLID } },
+            resolve(parent, args) {
+                return Invoice.findById(args.id);
+            }
+        },
+        invoiceSummary: {
+            type: new GraphQLList(new GraphQLObjectType({
+                name: "invoice",
+                fields: {
+                    _id: { type: GraphQLString },
+                    count: { type: GraphQLInt },
+                    date: { type: GraphQLString },
+                    subtotal: { type: GraphQLInt },
+                    total: { type: GraphQLInt },
+                    details: { type: new GraphQLList(InvoiceType) }
+                }
+            })),
+            args: {
+                groupBy: { type: GraphQLString },
+            },
+            async resolve(parent, args) {
+                let id;
+                if (args.groupBy === "date") {
+                    id = { $dateToString: { date: '$date' } };
+                }
+                else {
+                    id = `$${args.groupBy}`;
+                }
+                // console.log(id);
+                const invoices = await Invoice.aggregate([
+                    {
+                        $group: {
+                            _id: id,
+                            count: { $sum: 1 },
+                            total: { $sum: '$total' },
+                            details: { $push: "$$ROOT" }
+                        }
+                    }
+                ]);
+                // console.log(invoices);
+                return invoices;
+            }
+        }
     }
 });
 

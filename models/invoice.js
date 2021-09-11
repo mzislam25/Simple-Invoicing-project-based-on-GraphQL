@@ -6,8 +6,8 @@ const invoiceSchema = new Schema({
     customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
     creatorId: { type: Schema.Types.ObjectId, ref: 'User' },
     date: { type: Date, default: Date.now },
-    subtotal: String,
-    total: String
+    subtotal: Number,
+    total: Number
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

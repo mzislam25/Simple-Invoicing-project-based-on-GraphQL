@@ -45,7 +45,7 @@ app.use(passport.session());
 
 mongoose.connect('mongodb://localhost/graphql-test')
 mongoose.connection.once('open', () => {
-    console.log('Conneted to Database');
+    console.log('Connected to Database');
 });
 const graphqlHTTPInit = graphqlHTTP((req, res) => {
     return ({
